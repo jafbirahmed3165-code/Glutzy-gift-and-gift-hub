@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reseller Hub | GiftShop Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Firebase SDK Setup -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root { --primary-color: #ff4757; --secondary-color: #2f3542; --bg-color: #f1f2f6; --card-bg: #ffffff; --text-color: #2f3542; --shadow: 0 4px 15px rgba(0,0,0,0.1); --transition: all 0.3s ease; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; background-image: linear-gradient(rgba(255, 71, 87, 0.05), rgba(47, 53, 66, 0.05)); }
+        
+        .home-btn { position: absolute; top: 20px; left: 20px; text-decoration: none; color: var(--secondary-color); font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: var(--transition); }
+        .home-btn:hover { color: var(--primary-color); }
+        
+        .auth-card { background: var(--card-bg); width: 100%; max-width: 400px; padding: 40px 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; margin: 20px; position: relative; overflow: hidden; }
+        
+        #loadingOverlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9); z-index: 10;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            display: none;
+        }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .auth-header { margin-bottom: 30px; }
+        .auth-header i { font-size: 40px; color: var(--primary-color); margin-bottom: 10px; }
+        .auth-header h2 { font-size: 24px; font-weight: 700; color: var(--secondary-color); }
+        .auth-header p { font-size: 13px; color: #777; margin-top: 5px; }
+        
+        .input-group { margin-bottom: 20px; text-align: left; position: relative; }
+        .input-group label { font-size: 12px; font-weight: 600; color: var(--secondary-color); margin-bottom: 5px; display: block; }
+        .input-group input { width: 100%; padding: 12px 15px; padding-left: 40px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; outline: none; background: #f9f9f9; transition: var(--transition); }
+        .input-group i { position: absolute; left: 15px; top: 38px; color: #aaa; font-size: 14px; }
+        .input-group input:focus { border-color: var(--primary-color); background: #fff; box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.1); }
+        
+        .submit-btn { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: var(--transition); box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3); }
+        .submit-btn:hover { background: #e84118; transform: translateY(-2px); }
+        .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .auth-links { margin-top: 20px; font-size: 13px; color: #666; }
+        .auth-links span { color: var(--primary-color); font-weight: 600; cursor: pointer; text-decoration: underline; }
+        
+        .forgot-link { display: block; text-align: right; font-size: 12px; color: #888; margin-top: -10px; margin-bottom: 20px; cursor: pointer; }
+        .forgot-link:hover { color: var(--primary-color); }
+        
+        .form-section { display: none; animation: fadeIn 0.5s ease; }
+        .form-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="home-btn"><i class="fas fa-arrow-left"></i> Back to Shop</a>
+
+    <div class="auth-card">
+        
+        <div id="loadingOverlay"><div class="spinner"></div><p>Checking Login Status...</p></div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginForm" class="form-section active">
+            <div class="auth-header"><i class="fas fa-briefcase"></i><h2>Reseller Login</h2><p>Welcome back! Access your business dashboard.</p></div>
+            <form onsubmit="handleLogin(event)">
+                <div class="input-group"><label>Email Address</label><i class="fas fa-envelope"></i><input type="email" id="loginEmail" placeholder="Enter your email" required></div>
+                <div class="input-group"><label>Password</label><i class="fas fa-lock"></i><input type="password" id="loginPass" placeholder="Enter your password" required></div>
+                <div class="forgot-link" onclick="switchForm('forgotForm')">Forgot Password?</div>
+                <button type="submit" class="submit-btn">Login to Dashboard</button>
+            </form>
+            <div class="auth-links">New Reseller? <span onclick="switchForm('registerForm')">Apply for Registration</span></div>
+        </div>
+
+        <!-- REGISTRATION FORM -->
+        <div id="registerForm" class="form-section">
+            <div class="auth-header"><i class="fas fa-user-plus"></i><h2>Become a Reseller</h2><p>Join our network and start earning today.</p></div>
+            <form onsubmit="handleRegister(event)">
+                <div class="input-group"><label>Full Name</label><i class="fas fa-user"></i><input type="text" id="regName" placeholder="Your full name" required></div>
+                <div class="input-group"><label>Business / Page Name</label><i class="fas fa-store"></i><input type="text" id="regShop" placeholder="Your shop name" required></div>
+                <div class="input-group"><label>Phone Number</label><i class="fas fa-phone"></i><input type="tel" id="regPhone" placeholder="01XXX-XXXXXX" required></div>
+                <div class="input-group"><label>Email Address</label><i class="fas fa-envelope"></i><input type="email" id="regEmail" placeholder="Enter valid email" required></div>
+                <div class="input-group"><label>Password</label><i class="fas fa-lock"></i><input type="password" id="regPass" placeholder="Create a strong password" required></div>
+                <button type="submit" class="submit-btn">Submit Application</button>
+            </form>
+            <div class="auth-links">Already registered? <span onclick="switchForm('loginForm')">Login Here</span></div>
+        </div>
+
+        <!-- FORGOT PASSWORD FORM -->
+        <div id="forgotForm" class="form-section">
+            <div class="auth-header"><i class="fas fa-key"></i><h2>Reset Password</h2><p>Enter your email to receive recovery instructions.</p></div>
+            <form onsubmit="handleForgot(event)">
+                <div class="input-group"><label>Registered Email</label><i class="fas fa-envelope"></i><input type="email" id="forgotEmail" placeholder="Enter your email" required></div>
+                <button type="submit" class="submit-btn">Send Reset Link</button>
+            </form>
+            <div class="auth-links">Remembered password? <span onclick="switchForm('loginForm')">Back to Login</span></div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBmZDrv-oregwk_u5v_IEOGnwuZcLKKXkE",
+            authDomain: "glitzy-gift.firebaseapp.com",
+            databaseURL: "https://glitzy-gift-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "glitzy-gift",
+            storageBucket: "glitzy-gift.firebasestorage.app",
+            messagingSenderId: "186131317796",
+            appId: "1:186131317796:web:7c48a2224a1c8b74a2c4b1",
+            measurementId: "G-X3PERVEMMX"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = 'flex';
+            auth.onAuthStateChanged((user) => {
+                if (user && user.email && user.email.startsWith('reseller_')) {
+                    if (localStorage.getItem('isResellerLoggedIn') === 'true') {
+                        window.location.href = 'rshome.html';
+                    } else {
+                        auth.signOut();
+                        overlay.style.display = 'none';
+                    }
+                } else {
+                    overlay.style.display = 'none';
+                }
+            });
+        });
+
+        function switchForm(formId) {
+            document.querySelectorAll('.form-section').forEach(form => form.classList.remove('active'));
+            document.getElementById(formId).classList.add('active');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const emailInput = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const authEmail = "reseller_" + emailInput;
+
+            btn.disabled = true;
+            btn.innerText = "Verifying...";
+            auth.signInWithEmailAndPassword(authEmail, pass)
+                .then((userCredential) => {
+                    localStorage.setItem('isResellerLoggedIn', 'true');
+                    window.location.href = 'rshome.html';
+                })
+                .catch((error) => {
+                    btn.disabled = false;
+                    btn.innerText = "Login to Dashboard";
+                    alert(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' ? "❌ Invalid Credentials or Not a Reseller Account." : "Error: " + error.message);
+                });
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const name = document.getElementById('regName').value;
+            const shop = document.getElementById('regShop').value;
+            const phone = document.getElementById('regPhone').value;
+            const emailInput = document.getElementById('regEmail').value.trim();
+            const pass = document.getElementById('regPass').value;
+            const authEmail = "reseller_" + emailInput;
+
+            if(pass.length < 6) { alert("Password must be at least 6 characters"); return; }
+
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            auth.createUserWithEmailAndPassword(authEmail, pass)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    return db.ref('resellers/' + user.uid).set({
+                        name: name, shopName: shop, phone: phone, email: emailInput,
+                        authEmail: authEmail, joined: new Date().toDateString(),
+                        status: 'Pending', role: 'reseller'
+                    });
+                })
+                .then(() => {
+                    alert("✅ Application Submitted! Please Login.");
+                    // *** THIS IS THE FIX ***
+                    // Sign out immediately so the user can log in manually.
+                    return auth.signOut();
+                })
+                .then(() => {
+                    // This runs after sign-out is complete.
+                    switchForm('loginForm');
+                    e.target.reset();
+                    btn.disabled = false;
+                    btn.innerText = "Submit Application";
+                })
+                .catch((error) => {
+                    btn.disabled = false;
+                    btn.innerText = "Submit Application";
+                    alert(error.code === 'auth/email-already-in-use' ? "⚠️ Already Registered as Reseller! Please Login." : "Error: " + error.message);
+                });
+        }
+
+        function handleForgot(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const emailInput = document.getElementById('forgotEmail').value.trim();
+            if(!emailInput) { alert("Please enter your email"); return; }
+            const authEmail = "reseller_" + emailInput;
+            
+            btn.disabled = true;
+            btn.innerText = "Sending...";
+            
+            auth.sendPasswordResetEmail(authEmail)
+                .then(() => {
+                    alert("✅ Reset Link Sent to: " + emailInput);
+                    switchForm('loginForm');
+                })
+                .catch((error) => {
+                    alert(error.code === 'auth/user-not-found' ? "❌ No Reseller account found with this email." : "Error: " + error.message);
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerText = "Send Reset Link";
+                });
+        }
+    </script>
+</body>
+</html>
